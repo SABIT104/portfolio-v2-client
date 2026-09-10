@@ -20,7 +20,7 @@ export default function CertificationSection() {
     // 1. Synchronize Live Certifications from Backend Database to 3D Shader Book
     async function syncCertifications() {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:5001/api/v1";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://portfolio-v2-new-backend.vercel.app/api/v1";
         const res = await fetch(`${backendUrl}/certification/all-certifications?limit=1000`);
         if (!res.ok) return;
         const data = await res.json();
@@ -37,8 +37,8 @@ export default function CertificationSection() {
       }
     }
 
-    // Initial attempt to push visibility & certs
-    notifyIframe({ type: "SET_VISIBILITY", visible: true });
+    // Initial attempt: keep WebGL paused until scrolled into viewport
+    notifyIframe({ type: "SET_VISIBILITY", visible: false });
     syncCertifications();
 
     // 2. IntersectionObserver to notify 3D WebGL renderer on scroll
@@ -56,7 +56,7 @@ export default function CertificationSection() {
             }
           });
         },
-        { threshold: 0.01 }
+        { threshold: 0.05 }
       );
       observer.observe(sectionRef.current);
     }
@@ -66,7 +66,6 @@ export default function CertificationSection() {
       if (!event.data) return;
 
       if (event.data.type === "IFRAME_READY") {
-        notifyIframe({ type: "SET_VISIBILITY", visible: true });
         syncCertifications();
       }
     };
@@ -86,7 +85,7 @@ export default function CertificationSection() {
       className="w-full relative bg-[#080808] py-6 sm:py-10 px-2 sm:px-6 lg:px-8"
     >
       <div className="max-w-7xl mx-auto w-full" ref={containerRef}>
-        <div className="shader-frame w-full h-[440px] sm:h-[520px] md:h-[580px] relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 shadow-2xl bg-[#171a24]">
+        <div className="shader-frame w-full h-[580px] sm:h-[680px] md:h-[780px] lg:h-[840px] relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 shadow-2xl bg-[#171a24]">
           <CompleteShelfLandingPage
             headingFont="iowan-old-style"
             bodyFont="inter"

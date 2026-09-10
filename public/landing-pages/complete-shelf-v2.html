@@ -466,34 +466,34 @@
     }
 
     .detail-title {
-      max-width: 90%;
+      max-width: 100%;
       margin: 0;
-      font-size: clamp(2.4rem, 5vw, 5.2rem);
-      font-weight: 500;
-      letter-spacing: -0.05em;
-      line-height: 0.92;
+      font-size: clamp(1.35rem, 2.2vw, 2.1rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
     .detail-deck {
-      margin: 22px 0 0;
-      font-size: clamp(1rem, 1.35vw, 1.22rem);
-      line-height: 1.55;
+      margin: 12px 0 0;
+      font-size: clamp(0.85rem, 1vw, 0.95rem);
+      line-height: 1.5;
     }
 
     .detail-deck::first-letter {
-      float: left;
-      margin: 5px 7px 0 0;
-      color: var(--accent);
-      font-size: 3.25em;
-      line-height: 0.72;
+      float: none;
+      margin: 0;
+      color: inherit;
+      font-size: inherit;
+      line-height: inherit;
     }
 
     .meta-list {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 18px 24px;
-      margin: 30px 0 0;
-      padding: 22px 0 0;
+      gap: 12px 18px;
+      margin: 16px 0 0;
+      padding: 14px 0 0;
       border-top: 1px solid var(--rule);
     }
 
@@ -1061,12 +1061,13 @@
     }
 
     .detail-title {
-      font-size: clamp(2.8rem, 5vw, 4.5rem);
+      font-size: clamp(1.35rem, 2.2vw, 2.1rem);
+      line-height: 1.2;
     }
 
     .detail-deck {
-      margin-top: 18px;
-      font-size: clamp(0.98rem, 1.2vw, 1.1rem);
+      margin-top: 12px;
+      font-size: 0.9rem;
       line-height: 1.5;
       color: var(--ink);
       transition: color 520ms var(--ease-out);
@@ -1348,18 +1349,18 @@
     }
 
     .detail-title {
-      max-width: calc(100% - 28px);
-      font-size: clamp(3.5rem, 6.3vw, 6.7rem);
-      font-weight: 400;
-      letter-spacing: -0.065em;
-      line-height: 0.82;
+      max-width: 100%;
+      font-size: clamp(1.35rem, 2.2vw, 2.1rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
     .detail-deck {
       max-width: 38em;
-      margin-top: 24px;
+      margin-top: 12px;
       font-family: var(--serif);
-      font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+      font-size: clamp(0.85rem, 1.1vw, 0.95rem);
       line-height: 1.5;
     }
 
@@ -1545,11 +1546,12 @@
       }
 
       .detail-title {
-        font-size: clamp(3rem, 14vw, 5rem);
+        font-size: clamp(1.2rem, 5vw, 1.6rem);
+        line-height: 1.25;
       }
 
       .detail-deck {
-        font-size: 1rem;
+        font-size: 0.85rem;
       }
     }
 
@@ -2196,6 +2198,20 @@
         metalness: 0
       })
     };
+
+    function fixGoogleDriveUrl(url) {
+      if (!url || typeof url !== "string") return "";
+      const cleanUrl = url.trim();
+      const driveFileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (driveFileDMatch && driveFileDMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveFileDMatch[1]}`;
+      }
+      const driveIdMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (cleanUrl.includes("drive.google.com") && driveIdMatch && driveIdMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveIdMatch[1]}`;
+      }
+      return cleanUrl;
+    }
 
     function createFadeMaterial(baseMaterial) {
       const material = baseMaterial.clone();
@@ -2950,6 +2966,21 @@
             ctx.font = '500 11px Inter, sans-serif';
             ctx.fillText(`ISSUER: ${(cert.issuer || book.title).toUpperCase()}`, frameX + frameW / 2, frameY + 235);
             ctx.restore();
+
+            const rawImgUrl = cert.imageUrl || (cert.image && cert.image.url);
+            if (rawImgUrl) {
+              const fixedImgUrl = fixGoogleDriveUrl(rawImgUrl);
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.src = fixedImgUrl;
+              img.onload = () => {
+                ctx.save();
+                ctx.drawImage(img, frameX + 14, frameY + 14, frameW - 28, frameH - 28);
+                ctx.restore();
+                texture.needsUpdate = true;
+                if (typeof requestFrame === "function") requestFrame();
+              };
+            }
 
             // Certificate Details (Date, Verified Status Badge, Description)
             ctx.textAlign = "left";
@@ -6022,14 +6053,24 @@
           id: item.credentialId || item._id || "VERIFIED",
           issuer: item.issuer || volTitle,
           skills: Array.isArray(item.skills) ? item.skills.filter(Boolean).join(" • ") : (item.skills || "Verified Skills"),
-          desc: item.description || "Certified expertise and professional mastery."
+          desc: item.description || "Certified expertise and professional mastery.",
+          imageUrl: fixGoogleDriveUrl(item.image?.url || item.imageUrl || "")
         });
       });
 
+      const volumes = Array.from(volumeMap.values());
       const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII"];
-      let volIndex = 0;
 
-      volumeMap.forEach((volData, volTitle) => {
+      while (bookRigs.length > volumes.length) {
+        const extraRig = bookRigs.pop();
+        if (extraRig && extraRig.root && extraRig.root.parent) {
+          extraRig.root.parent.remove(extraRig.root);
+        }
+        BOOKS.pop();
+      }
+
+      volumes.forEach((volData, volIndex) => {
+        const volTitle = volData.volumeTitle;
         if (BOOKS[volIndex]) {
           BOOKS[volIndex].title = volTitle;
           BOOKS[volIndex].binding = volTitle;
@@ -6085,8 +6126,12 @@
         }
 
         const book = BOOKS[volIndex];
-        const bookRig = bookRigs[volIndex];
-        if (bookRig && book) {
+        let bookRig = bookRigs[volIndex];
+        if (!bookRig) {
+          bookRig = createBookRig(book, volIndex);
+          shelfStage.add(bookRig.root);
+          bookRigs[volIndex] = bookRig;
+        } else {
           const newInteriorTextures = makeInteriorPageTextures(book);
           const newCoverTexture = makeCoverTexture(book);
 
@@ -6110,8 +6155,22 @@
             bookRig.coverArt.needsUpdate = true;
           }
         }
-        volIndex++;
       });
+
+      if (markers) {
+        markers.innerHTML = "";
+        BOOKS.forEach((book, index) => {
+          const button = document.createElement("button");
+          button.className = "marker";
+          button.type = "button";
+          button.role = "tab";
+          button.setAttribute("aria-label", `Select volume ${index + 1}: ${book.title}`);
+          button.setAttribute("aria-current", index === selectedIndex ? "true" : "false");
+          button.setAttribute("aria-selected", index === selectedIndex ? "true" : "false");
+          button.addEventListener("click", () => selectMarker(index, button));
+          markers.append(button);
+        });
+      }
 
       if (typeof updateSelection === "function") {
         updateSelection(selectedIndex, false);
@@ -6126,9 +6185,9 @@
 
     async function loadLiveBackendCertifications() {
       try {
-        const hostname = window.location.hostname || "localhost";
-        const backendUrl = `http://${hostname}:5001/api/v1`;
-        const response = await fetch(`${backendUrl}/certification/all-certifications`);
+        const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        const backendUrl = isLocal ? "http://localhost:5001/api/v1" : "https://portfolio-v2-new-backend.vercel.app/api/v1";
+        const response = await fetch(`${backendUrl}/certification/all-certifications?limit=1000`);
         if (!response.ok) return;
         const resData = await response.json();
         const rawCerts = resData?.data?.data || resData?.data || [];

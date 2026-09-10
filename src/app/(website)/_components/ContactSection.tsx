@@ -122,8 +122,8 @@ export default function UpdatedContactSection() {
       icon: <MapPin className="text-[#c7d300]" size={20} />,
       label: "Location",
       value: publicInfo?.location || "Dhaka, Bangladesh",
-      href: "#",
-      external: false,
+      href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(publicInfo?.location || "Dhaka, Bangladesh")}`,
+      external: true,
     },
     {
       icon: <Globe className="text-[#c7d300]" size={20} />,

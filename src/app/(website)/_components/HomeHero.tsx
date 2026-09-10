@@ -24,7 +24,7 @@ type HeroData = {
 };
 
 const DUMMY_CV_URL =
-  "http://localhost:5001/uploads/resumes/saimun_sabit_resume.pdf";
+  "https://portfolio-v2-new-backend.vercel.app/uploads/resumes/saimun_sabit_resume.pdf";
 const DUMMY_INTRO_VIDEO_URL =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
@@ -246,13 +246,7 @@ function HomeHero() {
   const [isMobile, setIsMobile] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
-  // Auto-switch viewMode every 7 seconds continuously
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setViewMode((prev) => (prev === "api" ? "lamp" : "api"));
-    }, 7000);
-    return () => clearInterval(timer);
-  }, [viewMode]);
+  // Default viewMode is 'api' (Classic Hero) with instant toggle controls
 
   useEffect(() => {
     const checkMobile = () => {
@@ -266,9 +260,10 @@ function HomeHero() {
   const { data: response } = useQuery({
     queryKey: ["heroData"],
     queryFn: async () => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/home/activeHero`,
-      );
+      const backendUrl =
+        process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+        "https://portfolio-v2-new-backend.vercel.app/api/v1";
+      const res = await fetch(`${backendUrl}/home/activeHero`);
       if (!res.ok) return {};
       return res.json();
     },
@@ -277,9 +272,10 @@ function HomeHero() {
   const { data: resumeResponse } = useQuery({
     queryKey: ["activeResume"],
     queryFn: async () => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/resume/activeresume`,
-      );
+      const backendUrl =
+        process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+        "https://portfolio-v2-new-backend.vercel.app/api/v1";
+      const res = await fetch(`${backendUrl}/resume/activeresume`);
       return res.json();
     },
   });
@@ -287,15 +283,31 @@ function HomeHero() {
   const hero = normalizeHero(response?.data || {});
   const activeResumeData = resumeResponse?.data;
 
-  const rawHeroCv = response?.data?.cvFileUrl;
-  const rawResumeCv = activeResumeData?.resumeUrl;
+  const fixUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.includes("localhost:5001")) {
+      return url.replace(/http:\/\/localhost:5001/g, "https://portfolio-v2-new-backend.vercel.app");
+    }
+    if (url.startsWith("/")) {
+      return `https://portfolio-v2-new-backend.vercel.app${url}`;
+    }
+    return url;
+  };
+
+  const rawHeroCv = fixUrl(response?.data?.cvFileUrl);
+  const rawResumeCv = fixUrl(activeResumeData?.resumeUrl);
 
   const cvUrl =
     (rawResumeCv && rawResumeCv.trim() !== "" && !rawResumeCv.includes("raw/upload"))
       ? rawResumeCv
       : (rawHeroCv && rawHeroCv.trim() !== "" && !rawHeroCv.includes("raw/upload"))
       ? rawHeroCv
-      : DUMMY_CV_URL;
+      : "https://portfolio-v2-new-backend.vercel.app/uploads/resumes/resume-1788339437948.pdf";
+
+  const rawVideoUrl = fixUrl(hero.videoUrl || activeResumeData?.videoUrl);
+  const activeVideoUrl = rawVideoUrl && rawVideoUrl.trim() !== ""
+    ? rawVideoUrl
+    : "https://res.cloudinary.com/djdonjt3r/video/upload/v1788339450/portfoliov2/videos/video-1788339437948.mp4";
 
   const sequence = hero.typingAnimationLines.flatMap((line) => [line, 2200]);
 
@@ -425,7 +437,7 @@ function HomeHero() {
       <IntroVideoModal
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
-        videoUrl={hero.videoUrl || activeResumeData?.videoUrl}
+        videoUrl={activeVideoUrl}
       />
 
       <style jsx global>{`
